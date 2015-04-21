@@ -36,7 +36,6 @@ public class SpMtrix
 	}
 
 	// private Integer getIndex(Map<String, Integer> map, String key,
-	
 	// Integer indexCount)
 	// {
 	// Integer index = null;
