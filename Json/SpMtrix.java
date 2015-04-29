@@ -8,6 +8,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -257,6 +260,69 @@ public class SpMtrix
 
 	}
 
+	private void writeMapToDatabase(Map<String, Integer> map,
+			String databaseName, String keyName, String valueName)
+	{
+		DbConntion dc = new DbConntion();
+		Connection con = dc.getConnection();
+		Statement stmt = null;
+		try
+		{
+			stmt = con.createStatement();
+			StringBuffer sbdatabaseName = new StringBuffer("CREATE TABLE ");
+			sbdatabaseName.append(databaseName).append(" (").append(keyName)
+					.append(" varchar(200) NOT NULL,").append(valueName)
+					.append(" int NOT NULL)");
+			stmt.execute(sbdatabaseName.toString());
+		}
+		catch (SQLException e)
+		{
+			// e.printStackTrace();
+			System.out.println("Exception: " + e.getMessage());
+			return;
+		}
+		try
+		{
+			Iterator<Map.Entry<String, Integer>> ite = map.entrySet()
+					.iterator();
+			while (ite.hasNext())
+			{
+				Map.Entry<String, Integer> me = ite.next();
+				String name = me.getKey();
+				Integer id = me.getValue();
+				StringBuffer sbSql = new StringBuffer(
+						"INSERT INTO ExpName VALUES(").append("''").append(name)
+						.append("''").append(",").append("''")
+						.append(id.toString()).append("''").append(")");
+
+				stmt.executeUpdate(sbSql.toString());
+				con.close();
+			}
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+	}
+	
+	public void writeExpertToDatabase()
+	{
+		System.out.println("write expert to database ...");
+		this.writeMapToDatabase(this.expertMap, "Expert", "Name", "ID");
+	}
+	
+	public void writeKeyWordsToDatabase()
+	{
+		System.out.println("write keywords to database ...");
+		this.writeMapToDatabase(this.keyMap, "KeyWords", "KeyWord", "ID");
+	}
+	
+	public void writeToDatabase()
+	{
+		this.writeExpertToDatabase();
+		this.writeKeyWordsToDatabase();
+	}
+	
 	public void writToFile()
 	{
 		this.writeExpertToFile();
@@ -279,6 +345,6 @@ public class SpMtrix
 	public static void main(String[] args)
 	{
 		SpMtrix sm = new SpMtrix();
-		sm.writToFile();
+		sm.writeToDatabase();
 	}
 }
