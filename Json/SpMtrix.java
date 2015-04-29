@@ -261,7 +261,7 @@ public class SpMtrix
 	}
 
 	private void writeMapToDatabase(Map<String, Integer> map,
-			String databaseName, String keyName, String valueName)
+			String databaseName, String keyName, String valueName,boolean isprocess)
 	{
 		DbConntion dc = new DbConntion();
 		Connection con = dc.getConnection();
@@ -289,14 +289,18 @@ public class SpMtrix
 			{
 				Map.Entry<String, Integer> me = ite.next();
 				String name = me.getKey();
+				if(isprocess)
+				{
+					name = name.replace("'", "''");//TODO 有更有效率的方法吗？
+				}
 				Integer id = me.getValue();
 				StringBuffer sbSql = new StringBuffer(
-						"INSERT INTO ExpName VALUES(").append("''").append(name)
-						.append("''").append(",").append("''")
-						.append(id.toString()).append("''").append(")");
+						"INSERT INTO ").append(databaseName).append(" VALUES(").append("'").append(name)
+						.append("'").append(",").append("'")
+						.append(id.toString()).append("'").append(")");
 
 				stmt.executeUpdate(sbSql.toString());
-				con.close();
+//				con.close();
 			}
 		}
 		catch (SQLException e)
@@ -308,19 +312,26 @@ public class SpMtrix
 	public void writeExpertToDatabase()
 	{
 		System.out.println("write expert to database ...");
-		this.writeMapToDatabase(this.expertMap, "Expert", "Name", "ID");
+		this.writeMapToDatabase(this.expertMap, "Expert", "Name", "ID",false);
 	}
 	
 	public void writeKeyWordsToDatabase()
 	{
 		System.out.println("write keywords to database ...");
-		this.writeMapToDatabase(this.keyMap, "KeyWords", "KeyWord", "ID");
+		this.writeMapToDatabase(this.keyMap, "KeyWords", "KeyWord", "ID",true);
+	}
+	
+	public void writeTripleTableToDatabase()
+	{
+		System.out.println("write tripletable to database ...");
+		this.tripleTable.writeToDatabase();
 	}
 	
 	public void writeToDatabase()
 	{
 		this.writeExpertToDatabase();
 		this.writeKeyWordsToDatabase();
+		this.writeTripleTableToDatabase();
 	}
 	
 	public void writToFile()
