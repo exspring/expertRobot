@@ -1,4 +1,4 @@
-package Json;
+package matrix;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.locks.StampedLock;
+
+import database.DbConntion;
 
 public class TripleTable
 {
@@ -71,7 +73,7 @@ public class TripleTable
 		}
 		catch (SQLException e)
 		{
-//			e.printStackTrace();
+			// e.printStackTrace();
 			System.out.println(e.getMessage());
 			return;
 		}
@@ -81,7 +83,7 @@ public class TripleTable
 		{
 			Map.Entry<Integer, Map<Integer, Integer>> wme = iite.next();
 			Integer keywordID = wme.getKey();
-			Map<Integer, Integer> m = wme.getValue();
+			Map<Integer, Integer> m = wme.getValue(); //关键词对应的 expert<-->value Map
 			Iterator<Map.Entry<Integer, Integer>> ite = m.entrySet().iterator();
 			while (ite.hasNext())
 			{
