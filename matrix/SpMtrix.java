@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
@@ -65,6 +66,31 @@ public class SpMtrix
 		{
 			this.tripleTable.put(keyindex, expertindex, 1);
 		}
+	}
+
+	private int getIndex(String table, String first, String query)
+	{
+		DbConntion dc = new DbConntion();
+		Connection con = dc.getConnection();
+		Statement stmt = null;
+		ResultSet rs = null;
+		StringBuffer sbsql = new StringBuffer("SELECT ID FROM ")
+				.append(table).append(" WHERE ").append(first).append(" = '")
+				.append(query).append("';");
+		try
+		{
+			stmt = con.createStatement();
+			rs = stmt.executeQuery(sbsql.toString());
+			if (rs.next())
+			{
+				return rs.getInt(1);
+			}
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		return -1;
 	}
 
 	private Integer getExpertIndex(String name) // 获取专家的indexcount,没有就添加添加到对应的map中
@@ -263,7 +289,8 @@ public class SpMtrix
 	}
 
 	private void writeMapToDatabase(Map<String, Integer> map,
-			String databaseName, String keyName, String valueName,boolean isprocess)
+			String databaseName, String keyName, String valueName,
+			boolean isprocess)
 	{
 		DbConntion dc = new DbConntion();
 		Connection con = dc.getConnection();
@@ -291,18 +318,18 @@ public class SpMtrix
 			{
 				Map.Entry<String, Integer> me = ite.next();
 				String name = me.getKey();
-				if(isprocess)
+				if (isprocess)
 				{
-					name = name.replace("'", "''");//TODO 有更有效率的方法吗？
+					name = name.replace("'", "''");// TODO 有更有效率的方法吗？
 				}
 				Integer id = me.getValue();
-				StringBuffer sbSql = new StringBuffer(
-						"INSERT INTO ").append(databaseName).append(" VALUES(").append("'").append(name)
-						.append("'").append(",").append("'")
+				StringBuffer sbSql = new StringBuffer("INSERT INTO ")
+						.append(databaseName).append(" VALUES(").append("'")
+						.append(name).append("'").append(",").append("'")
 						.append(id.toString()).append("'").append(")");
 
 				stmt.executeUpdate(sbSql.toString());
-//				con.close();
+				// con.close();
 			}
 		}
 		catch (SQLException e)
@@ -310,32 +337,32 @@ public class SpMtrix
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void writeExpertToDatabase()
 	{
 		System.out.println("write expert to database ...");
-		this.writeMapToDatabase(this.expertMap, "Expert", "Name", "ID",false);
+		this.writeMapToDatabase(this.expertMap, "Expert", "Name", "ID", false);
 	}
-	
+
 	public void writeKeyWordsToDatabase()
 	{
 		System.out.println("write keywords to database ...");
-		this.writeMapToDatabase(this.keyMap, "KeyWords", "KeyWord", "ID",true);
+		this.writeMapToDatabase(this.keyMap, "KeyWords", "KeyWord", "ID", true);
 	}
-	
+
 	public void writeTripleTableToDatabase()
 	{
 		System.out.println("write tripletable to database ...");
 		this.tripleTable.writeToDatabase();
 	}
-	
+
 	public void writeToDatabase()
 	{
 		this.writeExpertToDatabase();
 		this.writeKeyWordsToDatabase();
 		this.writeTripleTableToDatabase();
 	}
-	
+
 	public void writToFile()
 	{
 		this.writeExpertToFile();

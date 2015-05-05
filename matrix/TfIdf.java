@@ -8,6 +8,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+
+import database.DbConntion;
 
 public class TfIdf
 {
@@ -38,6 +43,8 @@ public class TfIdf
 	private Map<String, Integer> frequencyMap;
 
 	private String fileName;
+	
+	private Statement stmt ;
 
 	public Set<String> getDirtWordList()
 	{
@@ -403,6 +410,37 @@ public class TfIdf
 		{
 			e.printStackTrace();
 		}
+	}
+	
+	private void createDatabase()
+	{
+		StringBuffer createSql = new StringBuffer("CREATE DATABASE tfidf");
+		try
+		{
+			stmt.execute(createSql.toString());
+		}
+		catch(SQLException e)
+		{
+			System.out.println(e.getMessage());
+			return ;
+		}
+	}
+	
+	public void writeToDatabase()
+	{
+		DbConntion dc = new DbConntion();
+		Connection con = dc.getConnection();
+		try
+		{
+			this.stmt = con.createStatement();
+			this.createDatabase();
+		}
+		catch(SQLException e)
+		{
+			System.out.println(e.getMessage());
+			return ;
+		}
+		
 	}
 
 	public TfIdf()
