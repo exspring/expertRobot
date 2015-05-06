@@ -20,10 +20,18 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import database.DatabaseOp;
 import database.DbConntion;
 
+/**
+ * @author lxx
+ *
+ */
 public class TfIdf
 {
+	/**
+	 * 过滤处出来的没有用的词
+	 */
 	private Set<String> dirtWordList;
 
 	private Map<String, Map<String, Integer>> tfMap;
@@ -32,6 +40,9 @@ public class TfIdf
 
 	private Map<String, Map<String, Double>> tfidf;
 
+	/**
+	 * 分词后的文件或文件夹，亦即输入路径
+	 */
 	private File wordPath;
 
 	private File keyWordPath;
@@ -45,6 +56,8 @@ public class TfIdf
 	private String fileName;
 	
 	private Statement stmt ;
+	
+	private String databaseName;
 
 	public Set<String> getDirtWordList()
 	{
@@ -412,35 +425,131 @@ public class TfIdf
 		}
 	}
 	
-	private void createDatabase()
+	/**
+	 * 建立数据库
+	 * @return
+	 * 建好的数据库名称
+	 */
+	private String createDatabase()
 	{
-		StringBuffer createSql = new StringBuffer("CREATE DATABASE tfidf");
-		try
-		{
-			stmt.execute(createSql.toString());
-		}
-		catch(SQLException e)
-		{
-			System.out.println(e.getMessage());
-			return ;
-		}
+		return DatabaseOp.createDatabase(this.databaseName);
 	}
 	
-	public void writeToDatabase()
+	/**
+	 * 建立一张表
+	 * @param tableName
+	 * 要建立的表名
+	 * @param databaseName
+	 * 把表建在哪个数据库
+	 * @return
+	 * 建立好的表的名称
+	 */
+	private String createTable(String tableName, String databaseName)
 	{
-		DbConntion dc = new DbConntion();
+		String columLable = "word varchar(50) NOT NULL, value float NOT NULL";
+		
+		return DatabaseOp.createTable(tableName, columLable, databaseName);
+	}
+	
+	/**
+	 * 根据this.databaseName获取Statement
+	 * 
+	 */
+	private void getStmt()
+	{
+		DbConntion dc = new DbConntion(this.databaseName);
 		Connection con = dc.getConnection();
 		try
 		{
 			this.stmt = con.createStatement();
-			this.createDatabase();
 		}
 		catch(SQLException e)
 		{
-			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * 将词语的tfidf写入表中
+	 * @param word
+	 * 词语
+	 * @param value
+	 * tfidf值
+	 * @param tableName
+	 * 要写入的表
+	 */
+	private void insertIntoTable(String word, Double value, String tableName)
+	{
+		StringBuffer insertSql = new StringBuffer("INSERT INTO ");
+		insertSql.append(tableName).append(" VALUES ").append(" ( ");
+		insertSql.append("'").append(word).append("',");
+		insertSql.append(value.toString());
+		insertSql.append(" );");
+		
+		System.out.println(insertSql.toString());
+		
+		try
+		{
+			this.stmt.execute(insertSql.toString());
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 把某个专家的所有词写入到表中
+	 * @param expertName
+	 * 专家名称，会用作表名
+	 * @param expert
+	 * 专家对应的所有词及其tfidf
+	 */
+	private void writeTfidfToDataBase(String expertName, Map<String, Double> expert)
+	{
+		String tableName = this.createTable(expertName, this.databaseName);
+		if(null == tableName)
+		{
+			System.out.println("Faild to create table!");
 			return ;
 		}
 		
+		Iterator<Map.Entry<String, Double>> ite = expert.entrySet().iterator();
+		while(ite.hasNext())
+		{
+			Map.Entry<String, Double> me = ite.next();
+			String word = me.getKey();
+			Double value = me.getValue();
+			
+			this.insertIntoTable(word, value, expertName);
+		}
+	}
+	
+	/**
+	 *将tfidf值写入到数据库中
+	 * 
+	 */
+	public void writeToDatabase()
+	{
+		this.databaseName = "tfidf";
+
+		String databaseName = this.createDatabase();
+		if(databaseName == null) //数据库创建失败
+		{
+			System.out.println("Failed to createDatabase!");
+			return ;
+		}
+
+		this.getStmt();
+
+		Iterator<Map.Entry<String, Map<String, Double>>> ite = this.tfidf.entrySet().iterator();
+		while(ite.hasNext()) //遍历所有专家
+		{
+			Map.Entry<String, Map<String, Double>> me = ite.next();
+			Map<String, Double> expert = me.getValue();
+			String expertName = me.getKey();
+			this.writeTfidfToDataBase(expertName, expert); //遍历某个专家对应的所有词
+		}
 	}
 
 	public TfIdf()
@@ -461,7 +570,8 @@ public class TfIdf
 	public static void main(String[] args)
 	{
 		TfIdf ti = new TfIdf();
-		ti.write();
+//		ti.write();
+		ti.writeToDatabase();
 		ti.createDirtWordsDict();
 	}
 }
