@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -54,10 +55,14 @@ public class TfIdf
 	private Map<String, Integer> frequencyMap;
 
 	private String fileName;
-	
-	private Statement stmt ;
-	
+
+	private Connection con;
+
 	private String databaseName;
+
+	private String tableName;
+
+	private int idCount = 0;
 
 	public Set<String> getDirtWordList()
 	{
@@ -121,7 +126,8 @@ public class TfIdf
 		if ((frequency = map.get(str)) == null)
 		{
 			map.put(str, 1);
-		} else
+		}
+		else
 		{
 			map.put(str, frequency + 1);
 		}
@@ -154,7 +160,8 @@ public class TfIdf
 			}
 			this.addFrequencyMapTotfMap(fileName, map);
 			reader.close();
-		} catch (IOException e)
+		}
+		catch (IOException e)
 		{
 			e.printStackTrace();
 		}
@@ -230,7 +237,8 @@ public class TfIdf
 			}
 			this.addToMap("", true);
 			reader.close();
-		} catch (IOException e)
+		}
+		catch (IOException e)
 		{
 			e.printStackTrace();
 		}
@@ -247,7 +255,8 @@ public class TfIdf
 			if ((value = ni.get(word)) == null)
 			{
 				ni.put(word, 1.0);
-			} else
+			}
+			else
 			{
 				ni.put(word, value + 1);
 			}
@@ -293,7 +302,8 @@ public class TfIdf
 			if (this.isImportant(tfidf))
 			{
 				tfidfmap.put(word, tfidf);
-			} else
+			}
+			else
 			{
 				this.dirtWordList.add(word);
 			}
@@ -306,7 +316,8 @@ public class TfIdf
 		if (this.wordPath.isDirectory())
 		{
 			this.readDirectory();
-		} else
+		}
+		else
 		{
 			this.readFile();
 		}
@@ -378,7 +389,8 @@ public class TfIdf
 				this.writeAFile(me.getValue(), writer);
 			}
 			writer.close();
-		} catch (IOException e)
+		}
+		catch (IOException e)
 		{
 			e.printStackTrace();
 		}
@@ -399,7 +411,8 @@ public class TfIdf
 				writer.append("\n");
 				// }
 			}
-		} catch (IOException e)
+		}
+		catch (IOException e)
 		{
 			e.printStackTrace();
 		}
@@ -419,80 +432,82 @@ public class TfIdf
 				writer.append("\n");
 			}
 			writer.close();
-		} catch (IOException e)
+		}
+		catch (IOException e)
 		{
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * 建立数据库
-	 * @return
-	 * 建好的数据库名称
+	 * 
+	 * @return 建好的数据库名称
 	 */
 	private String createDatabase()
 	{
 		return DatabaseOp.createDatabase(this.databaseName);
 	}
-	
+
 	/**
 	 * 建立一张表
+	 * 
 	 * @param tableName
-	 * 要建立的表名
+	 *            要建立的表名
 	 * @param databaseName
-	 * 把表建在哪个数据库
-	 * @return
-	 * 建立好的表的名称
+	 *            把表建在哪个数据库
+	 * @return 建立好的表的名称
 	 */
 	private String createTable(String tableName, String databaseName)
 	{
-		String columLable = "word varchar(50) NOT NULL, value float NOT NULL";
-		
+		String columLable = "id int NOT NULL, name varchar(200) NOT NULL, word varchar(200) NOT NULL, value float NOT NULL";
+
 		return DatabaseOp.createTable(tableName, columLable, databaseName);
 	}
-	
+
 	/**
-	 * 根据this.databaseName获取Statement
+	 * 根据this.databaseName获取一个关闭自动提交(setAutoCommint(false))的connection
 	 * 
 	 */
-	private void getStmt()
+	private void getDatabaseConnection()
 	{
 		DbConntion dc = new DbConntion(this.databaseName);
-		Connection con = dc.getConnection();
+		this.con = dc.getConnection();
 		try
 		{
-			this.stmt = con.createStatement();
+			con.setAutoCommit(false);
 		}
-		catch(SQLException e)
+		catch (SQLException e)
 		{
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * 将词语的tfidf写入表中
+	 * 
 	 * @param word
-	 * 词语
+	 *            词语
 	 * @param value
-	 * tfidf值
-	 * @param tableName
-	 * 要写入的表
+	 *            tfidf值
+	 * @param expertName
+	 *            专家名
+	 * @param pstmt
+	 *            预编译的statement,用来向表插入数据
 	 */
-	private void insertIntoTable(String word, Double value, String tableName)
+	private void insertIntoTable(String word, Double value, String expertName,
+			PreparedStatement pstmt)
 	{
-		StringBuffer insertSql = new StringBuffer("INSERT INTO ");
-		insertSql.append(tableName).append(" VALUES ").append(" ( ");
-		insertSql.append("'").append(word).append("',");
-		insertSql.append(value.toString());
-		insertSql.append(" );");
-		
-		System.out.println(insertSql.toString());
-		
 		try
 		{
-			this.stmt.execute(insertSql.toString());
+//			pstmt.setString(1, "tfiidf");
+			pstmt.setInt(2-1, ++this.idCount);
+			pstmt.setString(3-1, expertName);
+			pstmt.setString(4-1, word);
+			pstmt.setFloat(5-1, value.floatValue());
+			pstmt.executeUpdate();
 		}
-		catch(SQLException e)
+		catch (SQLException e)
 		{
 			e.printStackTrace();
 		}
@@ -500,55 +515,81 @@ public class TfIdf
 
 	/**
 	 * 把某个专家的所有词写入到表中
+	 * 
 	 * @param expertName
-	 * 专家名称，会用作表名
+	 *            专家名称
 	 * @param expert
-	 * 专家对应的所有词及其tfidf
+	 *            专家对应的所有词及其tfidf
+	 * @param pstmt
+	 *            预编译的statement,用来向表插入数据
 	 */
-	private void writeTfidfToDataBase(String expertName, Map<String, Double> expert)
+	private void writeTfidfToDataBase(String expertName,
+			Map<String, Double> expert, PreparedStatement pstmt)
 	{
-		String tableName = this.createTable(expertName, this.databaseName);
-		if(null == tableName)
-		{
-			System.out.println("Faild to create table!");
-			return ;
-		}
-		
+
 		Iterator<Map.Entry<String, Double>> ite = expert.entrySet().iterator();
-		while(ite.hasNext())
+		while (ite.hasNext()) // 遍历
 		{
 			Map.Entry<String, Double> me = ite.next();
 			String word = me.getKey();
 			Double value = me.getValue();
-			
-			this.insertIntoTable(word, value, expertName);
+
+			this.insertIntoTable(word, value, expertName, pstmt);
 		}
 	}
-	
+
 	/**
-	 *将tfidf值写入到数据库中
+	 * 将tfidf值写入到数据库中
 	 * 
 	 */
 	public void writeToDatabase()
 	{
-		this.databaseName = "tfidf";
+		this.databaseName = "expert";
 
-		String databaseName = this.createDatabase();
-		if(databaseName == null) //数据库创建失败
+		this.tableName = "tfidf";
+
+		// String databaseName = this.createDatabase();
+
+		if (databaseName == null) // 数据库创建失败
 		{
 			System.out.println("Failed to createDatabase!");
-			return ;
+			return;
 		}
 
-		this.getStmt();
+		this.getDatabaseConnection();
 
-		Iterator<Map.Entry<String, Map<String, Double>>> ite = this.tfidf.entrySet().iterator();
-		while(ite.hasNext()) //遍历所有专家
+		PreparedStatement pstmt = null;
+		StringBuffer insertSQL = new StringBuffer("INSERT INTO ");
+		insertSQL.append(this.tableName).append(" VALUES(?,?,?,?);");
+//		String insertSQL = "INSERT INTO tfiidf VALUES (?,?,?,?);";
+		try
+		{
+			pstmt = this.con.prepareStatement(insertSQL.toString());
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+
+		this.createTable(this.tableName, this.databaseName);
+
+		Iterator<Map.Entry<String, Map<String, Double>>> ite = this.tfidf
+				.entrySet().iterator();
+		while (ite.hasNext()) // 遍历所有专家
 		{
 			Map.Entry<String, Map<String, Double>> me = ite.next();
 			Map<String, Double> expert = me.getValue();
 			String expertName = me.getKey();
-			this.writeTfidfToDataBase(expertName, expert); //遍历某个专家对应的所有词
+			this.writeTfidfToDataBase(expertName, expert, pstmt); // 遍历某个专家对应的所有词
+		}
+		
+		try
+		{
+			this.con.commit();
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
 		}
 	}
 
@@ -570,7 +611,7 @@ public class TfIdf
 	public static void main(String[] args)
 	{
 		TfIdf ti = new TfIdf();
-//		ti.write();
+		// ti.write();
 		ti.writeToDatabase();
 		ti.createDirtWordsDict();
 	}
