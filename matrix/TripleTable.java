@@ -1,6 +1,7 @@
 package matrix;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
@@ -9,17 +10,18 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.locks.StampedLock;
 
+import database.DatabaseOp;
 import database.DbConntion;
 
 public class TripleTable
 {
-	private Map<Integer, Map<Integer, Integer>> tripleTable;
+	private Map<Integer, Map<Integer, Double>> tripleTable;
 
 	private int databaseIndexCount = 0;
 
 	public TripleTable()
 	{
-		this.tripleTable = new TreeMap<Integer, Map<Integer, Integer>>();
+		this.tripleTable = new TreeMap<Integer, Map<Integer, Double>>();
 	}
 
 	public boolean contains(int keyindex, int expertindex)
@@ -34,16 +36,16 @@ public class TripleTable
 		return false;
 	}
 
-	public void put(Integer keyindex, Integer expertindex, Integer value)
+	public void put(Integer keyindex, Integer expertindex, double value)
 	{
-		Map<Integer, Integer> entryMap = new TreeMap<Integer, Integer>();
+		Map<Integer, Double> entryMap = new TreeMap<Integer, Double>();
 		entryMap.put(expertindex, value);
 		this.tripleTable.put(keyindex, entryMap);
 	}
 
-	public Integer get(int keyindex, int expertindex)
+	public Double get(int keyindex, int expertindex)
 	{
-		Map<Integer, Integer> map = null;
+		Map<Integer, Double> map = null;
 		if ((map = this.tripleTable.get(keyindex)) != null)
 		{
 			return map.get(expertindex);
@@ -51,7 +53,7 @@ public class TripleTable
 		return null;
 	}
 
-	public Map<Integer, Integer> get(Integer keyindex)
+	public Map<Integer, Double> get(Integer keyindex)
 	{
 		return this.tripleTable.get(keyindex);
 	}
@@ -63,49 +65,61 @@ public class TripleTable
 
 	public void writeToDatabase()
 	{
+		String tableName = "TripleTable";
+		String columLable = "keyindex int NOT NULL, keywordid int NOT NULL, expertid int NOT NULL, value float NOT NULL ";
+		DatabaseOp.createTable(tableName, columLable, "expert"); // 创建表
+
 		DbConntion dc = new DbConntion();
-		Connection con = dc.getConnection();
-		Statement stmt = null;
+		Connection mcon = dc.getManualCommitConnection();
+
+		StringBuffer insertSQL = new StringBuffer("INSERT INTO ").append(
+				tableName).append(" VALUES (?,?,?,?);");
+		PreparedStatement pstmt = null;
 		try
 		{
-			stmt = con.createStatement();
-			stmt.execute("CREATE TABLE TripleTable ( keyindex int NOT NULL, keywordid int NOT NULL, expertid int NOT NULL, value int NOT NULL )");
+			pstmt = mcon.prepareStatement(insertSQL.toString());
 		}
 		catch (SQLException e)
 		{
-			// e.printStackTrace();
-			System.out.println(e.getMessage());
-			return;
+			e.printStackTrace();
 		}
-		Iterator<Map.Entry<Integer, Map<Integer, Integer>>> iite = this.tripleTable
+
+		Iterator<Map.Entry<Integer, Map<Integer, Double>>> iite = this.tripleTable
 				.entrySet().iterator();
+
 		while (iite.hasNext())
 		{
-			Map.Entry<Integer, Map<Integer, Integer>> wme = iite.next();
+			Map.Entry<Integer, Map<Integer, Double>> wme = iite.next();
 			Integer keywordID = wme.getKey();
-			Map<Integer, Integer> m = wme.getValue(); //关键词对应的 expert<-->value Map
-			Iterator<Map.Entry<Integer, Integer>> ite = m.entrySet().iterator();
+			Map<Integer, Double> m = wme.getValue(); // 关键词对应的 expert<-->value
+														// Map
+			Iterator<Map.Entry<Integer, Double>> ite = m.entrySet().iterator();
 			while (ite.hasNext())
 			{
-				Map.Entry<Integer, Integer> me = ite.next();
+				Map.Entry<Integer, Double> me = ite.next();
 				Integer expertID = me.getKey();
-				Integer value = me.getValue();
+				Double value = me.getValue();
 				try
 				{
-					StringBuffer insertSQL = new StringBuffer()
-							.append("INSERT INTO TripleTable VALUES ('")
-							.append((++this.databaseIndexCount)).append("',")
-							.append("'").append(keywordID.toString())
-							.append("',").append("'")
-							.append(expertID.toString()).append("',")
-							.append("'").append(value.toString()).append("')");
-					stmt.executeUpdate(insertSQL.toString());
+					pstmt.setInt(1, ++this.databaseIndexCount);
+					pstmt.setInt(2, keywordID);
+					pstmt.setInt(3, expertID);
+					pstmt.setFloat(4, value.floatValue());
+					pstmt.executeUpdate();
 				}
 				catch (SQLException e)
 				{
 					System.out.println(e.getMessage());
 				}
 			}
+		}
+		try
+		{
+			mcon.commit();
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
 		}
 		System.out.println("total : " + this.databaseIndexCount);
 	}

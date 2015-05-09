@@ -2,6 +2,7 @@ package database;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 
 public class DbConntion
 {
@@ -36,7 +37,7 @@ public class DbConntion
 		this.userName = "xin";
 		this.passWord = "123";
 	}
-	
+
 	public DbConntion(String databaseName, String userName, String passWord)
 	{
 		this.url = "jdbc:jtds:sqlserver://";
@@ -67,5 +68,21 @@ public class DbConntion
 			e.printStackTrace();
 		}
 		return connection;
+	}
+
+	public Connection getManualCommitConnection()
+	{
+		Connection con = this.getConnection();
+
+		try
+		{
+			con.setAutoCommit(false);
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+
+		return con;
 	}
 }

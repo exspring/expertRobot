@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import database.DatabaseOp;
 import database.DbConntion;
 
 public class SpMtrix
@@ -32,6 +34,10 @@ public class SpMtrix
 	private int expertIndexCount;
 
 	private int KeyIndexCount;
+
+	private String databaseName;
+
+	private Connection con; // database connnection
 
 	private TripleTable tripleTable;
 
@@ -57,7 +63,7 @@ public class SpMtrix
 
 	private void addToTripleTable(Integer keyindex, Integer expertindex) // 添加或更新三元组
 	{
-		Integer value = null;
+		Double value = null;
 		if ((value = this.tripleTable.get(keyindex, expertindex)) != null)
 		{
 			this.tripleTable.put(keyindex, expertindex, value + 1);
@@ -74,9 +80,9 @@ public class SpMtrix
 		Connection con = dc.getConnection();
 		Statement stmt = null;
 		ResultSet rs = null;
-		StringBuffer sbsql = new StringBuffer("SELECT ID FROM ")
-				.append(table).append(" WHERE ").append(first).append(" = '")
-				.append(query).append("';");
+		StringBuffer sbsql = new StringBuffer("SELECT ID FROM ").append(table)
+				.append(" WHERE ").append(first).append(" = '").append(query)
+				.append("';");
 		try
 		{
 			stmt = con.createStatement();
@@ -242,12 +248,12 @@ public class SpMtrix
 		}
 	}
 
-	private void writeIntegerMapToFile(Map<Integer, Integer> map,
+	private void writeIntegerMapToFile(Map<Integer, Double> map,
 			BufferedWriter writer)
 	{
 		try
 		{
-			Iterator<Map.Entry<Integer, Integer>> ite = map.entrySet()
+			Iterator<Map.Entry<Integer, Double>> ite = map.entrySet()
 					.iterator();
 			while (ite.hasNext())
 			{
@@ -288,49 +294,37 @@ public class SpMtrix
 
 	}
 
-	private void writeMapToDatabase(Map<String, Integer> map,
-			String databaseName, String keyName, String valueName,
-			boolean isprocess)
+	private void writeMapToDatabase(Map<String, Integer> map, String tableName,
+			String keyName, String valueName, boolean isprocess)
 	{
-		DbConntion dc = new DbConntion();
-		Connection con = dc.getConnection();
-		Statement stmt = null;
+		PreparedStatement pstmt = null;
+		// 创建表
+		StringBuffer createTableSQL = new StringBuffer(keyName)
+				.append(" varchar(200) NOT NULL,").append(valueName)
+				.append(" int NOT NULL");
+
+		DatabaseOp.createTable(tableName, createTableSQL.toString(),
+				this.databaseName);
+
 		try
 		{
-			stmt = con.createStatement();
-			StringBuffer sbdatabaseName = new StringBuffer("CREATE TABLE ");
-			sbdatabaseName.append(databaseName).append(" (").append(keyName)
-					.append(" varchar(200) NOT NULL,").append(valueName)
-					.append(" int NOT NULL)");
-			stmt.execute(sbdatabaseName.toString());
-		}
-		catch (SQLException e)
-		{
-			// e.printStackTrace();
-			System.out.println("Exception: " + e.getMessage());
-			return;
-		}
-		try
-		{
+			StringBuffer insertSQL = new StringBuffer("INSERT INTO ").append(
+					tableName).append(" VALUES( ?,?);");
+			pstmt = this.con.prepareStatement(insertSQL.toString());
+
 			Iterator<Map.Entry<String, Integer>> ite = map.entrySet()
 					.iterator();
-			while (ite.hasNext())
+			while (ite.hasNext()) //遍历
 			{
 				Map.Entry<String, Integer> me = ite.next();
 				String name = me.getKey();
-				if (isprocess)
-				{
-					name = name.replace("'", "''");// TODO 有更有效率的方法吗？
-				}
 				Integer id = me.getValue();
-				StringBuffer sbSql = new StringBuffer("INSERT INTO ")
-						.append(databaseName).append(" VALUES(").append("'")
-						.append(name).append("'").append(",").append("'")
-						.append(id.toString()).append("'").append(")");
 
-				stmt.executeUpdate(sbSql.toString());
-				// con.close();
+				pstmt.setString(1, name);
+				pstmt.setInt(2, id);
+				pstmt.execute();
 			}
+			this.con.commit();
 		}
 		catch (SQLException e)
 		{
@@ -358,6 +352,11 @@ public class SpMtrix
 
 	public void writeToDatabase()
 	{
+		DbConntion dc = new DbConntion();
+		this.con = dc.getManualCommitConnection();
+
+		this.databaseName = "expert";
+
 		this.writeExpertToDatabase();
 		this.writeKeyWordsToDatabase();
 		this.writeTripleTableToDatabase();

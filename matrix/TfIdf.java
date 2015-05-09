@@ -472,15 +472,7 @@ public class TfIdf
 	private void getDatabaseConnection()
 	{
 		DbConntion dc = new DbConntion(this.databaseName);
-		this.con = dc.getConnection();
-		try
-		{
-			con.setAutoCommit(false);
-		}
-		catch (SQLException e)
-		{
-			e.printStackTrace();
-		}
+		this.con = dc.getManualCommitConnection();
 	}
 
 	/**
