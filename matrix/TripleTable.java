@@ -65,8 +65,12 @@ public class TripleTable
 
 	public void writeToDatabase()
 	{
-		String tableName = "TripleTable";
-		String columLable = "keyindex int NOT NULL, keywordid int NOT NULL, expertid int NOT NULL, value float NOT NULL ";
+		String tableName = "SpMatrix";
+		String columLable = "id int NOT NULL PRIMARY KEY,"
+				+ " keywordid int NOT NULL REFERENCE keywords (id) ON UPDATE CASCADE ON DELETE CASCADE, "
+				+ "expertid int NOT NULL  REFERENCE expert (id) ON UPDATE CASCADE ON DELETE CASCADE, "
+				+ "value float NOT NULL ";
+
 		DatabaseOp.createTable(tableName, columLable, "expert"); // 创建表
 
 		DbConntion dc = new DbConntion();
@@ -113,6 +117,8 @@ public class TripleTable
 				}
 			}
 		}
+		
+		// TODO : 建立 keywordid expertid 的 非聚集索引
 		try
 		{
 			mcon.commit();

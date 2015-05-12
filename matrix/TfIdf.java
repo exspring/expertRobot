@@ -460,7 +460,7 @@ public class TfIdf
 	 */
 	private String createTable(String tableName, String databaseName)
 	{
-		String columLable = "id int NOT NULL, name varchar(200) NOT NULL, word varchar(200) NOT NULL, value float NOT NULL";
+		String columLable = "id bigint NOT NULL PRIMARY KEY, name varchar(200), word varchar(200) , value float ";
 
 		return DatabaseOp.createTable(tableName, columLable, databaseName);
 	}
@@ -492,11 +492,11 @@ public class TfIdf
 	{
 		try
 		{
-//			pstmt.setString(1, "tfiidf");
-			pstmt.setInt(2-1, ++this.idCount);
-			pstmt.setString(3-1, expertName);
-			pstmt.setString(4-1, word);
-			pstmt.setFloat(5-1, value.floatValue());
+			// pstmt.setString(1, "tfiidf");
+			pstmt.setInt(2 - 1, ++this.idCount);
+			pstmt.setString(3 - 1, expertName);
+			pstmt.setString(4 - 1, word);
+			pstmt.setFloat(5 - 1, value.floatValue());
 			pstmt.executeUpdate();
 		}
 		catch (SQLException e)
@@ -540,7 +540,7 @@ public class TfIdf
 
 		this.tableName = "tfidf";
 
-		// String databaseName = this.createDatabase();
+//		String databaseName = this.createDatabase();
 
 		if (databaseName == null) // 数据库创建失败
 		{
@@ -553,7 +553,7 @@ public class TfIdf
 		PreparedStatement pstmt = null;
 		StringBuffer insertSQL = new StringBuffer("INSERT INTO ");
 		insertSQL.append(this.tableName).append(" VALUES(?,?,?,?);");
-//		String insertSQL = "INSERT INTO tfiidf VALUES (?,?,?,?);";
+		// String insertSQL = "INSERT INTO tfiidf VALUES (?,?,?,?);";
 		try
 		{
 			pstmt = this.con.prepareStatement(insertSQL.toString());
@@ -574,12 +574,12 @@ public class TfIdf
 			String expertName = me.getKey();
 			this.writeTfidfToDataBase(expertName, expert, pstmt); // 遍历某个专家对应的所有词
 		}
-		
+
 		try
 		{
 			this.con.commit();
 		}
-		catch(SQLException e)
+		catch (SQLException e)
 		{
 			e.printStackTrace();
 		}

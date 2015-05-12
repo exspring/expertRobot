@@ -301,10 +301,16 @@ public class SpMtrix
 		// 创建表
 		StringBuffer createTableSQL = new StringBuffer(keyName)
 				.append(" varchar(200) NOT NULL,").append(valueName)
-				.append(" int NOT NULL");
+				.append(" bigint NOT NULL PRIMARY KEY");
 
 		DatabaseOp.createTable(tableName, createTableSQL.toString(),
-				this.databaseName);
+				this.databaseName); //创建表
+
+		StringBuffer indexSQL = new StringBuffer("CREATE NONCLUSTERED INDEX ")
+				.append(keyName).append("index").append("ON").append(tableName)
+				.append("(").append(keyName).append(keyName).append(");");
+
+		DatabaseOp.createIndex(indexSQL.toString(), this.databaseName); //创建非id列(expert.name,keywords.keyword)的非聚集索引
 
 		try
 		{
@@ -314,7 +320,7 @@ public class SpMtrix
 
 			Iterator<Map.Entry<String, Integer>> ite = map.entrySet()
 					.iterator();
-			while (ite.hasNext()) //遍历
+			while (ite.hasNext()) // 遍历
 			{
 				Map.Entry<String, Integer> me = ite.next();
 				String name = me.getKey();
