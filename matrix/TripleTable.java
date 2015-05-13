@@ -72,6 +72,8 @@ public class TripleTable
 				+ "value float NOT NULL ";
 
 		DatabaseOp.createTable(tableName, columLable, "expert"); // ´´½¨±í
+		
+		
 
 		DbConntion dc = new DbConntion();
 		Connection mcon = dc.getManualCommitConnection();
