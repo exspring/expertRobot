@@ -1,6 +1,7 @@
 package database;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
@@ -104,6 +105,25 @@ public class DatabaseOp
 		{
 			e.printStackTrace();
 		}
+	}
+	
+	public static ResultSet getFromDatabse(String querySQL, String database)
+	{
+		Connection con = DatabaseOp.getConnection(database);
+		
+		Statement stmt = null;
+		ResultSet res = null;
+		try
+		{
+			stmt = con.createStatement();
+			res = stmt.executeQuery(querySQL);
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		return res;
 	}
 
 }

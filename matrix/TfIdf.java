@@ -360,10 +360,25 @@ public class TfIdf
 		return me.getValue() > 1.0000;
 	}
 
+	/**
+	 * 根据给定词的tfidf值，判断一个词是不是重要.
+	 * @param tfidf 给定词的tfidf
+	 * @return 重要返回true，否则返回false
+	 */
 	private boolean isImportant(double tfidf)
 	{
 		return tfidf > this.importantThresholdValue;
 		// return true;
+	}
+	
+	/**
+	 * 根据给定词的idf值，判断一个词是不是重要
+	 * @param idf 给定词的idf值
+	 * @return 重要返回true，否则返回false
+	 */
+	private boolean isIdfImportant(double idf)
+	{
+		return idf > 5.000;
 	}
 
 	public Map<String, Map<String, Double>> getTFIDF()
@@ -552,7 +567,7 @@ public class TfIdf
 				String word = me.getKey();
 				Double value = me.getValue();
 
-				if (this.isImportant(value))
+				if (this.isImportant(value)) // TODO: is idf important 另写一个方法，判断一个idf是不是重要
 				{
 //					System.out.println(word);
 					pstmt.setString(1, word);

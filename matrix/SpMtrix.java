@@ -40,6 +40,8 @@ public class SpMtrix
 	private Connection con; // database connnection
 
 	private TripleTable tripleTable;
+	
+	private ResultSet tfidf;
 
 	private String getName(File file)
 	{
@@ -72,6 +74,11 @@ public class SpMtrix
 		{
 			this.tripleTable.put(keyindex, expertindex, 1);
 		}
+	}
+	
+	private void addToTripleTable(Integer keyindex, Integer expertindex, Double value)
+	{
+		this.tripleTable.put(keyindex, expertindex, value);
 	}
 
 	private int getIndex(String table, String first, String query)
@@ -188,6 +195,41 @@ public class SpMtrix
 			e.printStackTrace();
 		}
 	}
+	
+	private void updateMtrix(String key, String expert, Double value)
+	{
+		Integer keyIndex = this.getKeyIndex(key);
+		Integer expertIndex = this.getExpertIndex(expert);
+		
+		this.addToTripleTable(keyIndex, expertIndex, value);
+	}
+	public void readFromDatabase()
+	{
+		String querySQL = "SELECT name,word,value FROM tfidf;";
+		
+		this.tfidf = DatabaseOp.getFromDatabse(querySQL, this.databaseName); //获得tfidf表
+		
+		try
+		{
+			String key = null; //关键词
+			String expertName = null; //专家名
+			Double value = null; //tfidf值
+
+			while(this.tfidf.next()) //遍历
+			{
+				expertName = this.tfidf.getString(1);
+				key = this.tfidf.getString(2);
+				value = (double)this.tfidf.getFloat(3);
+				
+				this.updateMtrix(key, expertName, value); //更新矩阵
+			}
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+	
+	}
 
 	private void ergodic() // 遍历
 	{
@@ -200,16 +242,19 @@ public class SpMtrix
 
 	private void load() // load expertMap keyMap and build SpMtrix
 	{
-		if (this.keyWordsPath.isDirectory())
-		{
-			this.ergodic();
-		}
-		else
-		{
-			this.readFile();
-		}
+//		if (this.keyWordsPath.isDirectory())
+//		{
+//			this.ergodic();
+//		}
+//		else
+//		{
+//			this.readFile();
+//		}
 		// System.out.println(this.expertMap);
 		// System.out.println(this.keyMap);
+		
+		this.databaseName = "expert";
+		this.readFromDatabase();
 		System.out.println("keyIndexCount : " + this.KeyIndexCount);
 		System.out.println("expertIndexCount : " + this.expertIndexCount);
 	}
