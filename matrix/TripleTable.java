@@ -63,18 +63,28 @@ public class TripleTable
 		return this.tripleTable.keySet();
 	}
 
+	public void createIndex()
+	{
+		String keyWordIndexSQL = "CREATE NONCLUSTERED INDEX keywordindex ON SpMatrix(keywordid);";
+
+		String expertIndexSQL = "CREATE NONCLUSTERED INDEX expertidindex ON SpMatrix(expertid);";
+
+		DatabaseOp.createIndex(expertIndexSQL, "expert");
+		DatabaseOp.createIndex(keyWordIndexSQL, "expert");
+	}
+
 	public void writeToDatabase()
 	{
 		String tableName = "SpMatrix";
-		String columLable = "id int NOT NULL PRIMARY KEY,"
-				+ " keywordid int NOT NULL REFERENCE keywords (id) ON UPDATE CASCADE ON DELETE CASCADE, "
-				+ "expertid int NOT NULL  REFERENCE expert (id) ON UPDATE CASCADE ON DELETE CASCADE, "
+		String columLable = "id bigint NOT NULL PRIMARY KEY,"
+				+ " keywordid bigint NOT NULL REFERENCES keywords (ID) ON UPDATE CASCADE ON DELETE CASCADE, "
+				+ "expertid bigint NOT NULL  REFERENCES Expert (ID) ON UPDATE CASCADE ON DELETE CASCADE, "
 				+ "value float NOT NULL ";
 
 		DatabaseOp.createTable(tableName, columLable, "expert"); // ´´½¨±í
 		
+		this.createIndex();
 		
-
 		DbConntion dc = new DbConntion();
 		Connection mcon = dc.getManualCommitConnection();
 

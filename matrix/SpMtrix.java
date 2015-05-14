@@ -307,8 +307,8 @@ public class SpMtrix
 				this.databaseName); //创建表
 
 		StringBuffer indexSQL = new StringBuffer("CREATE NONCLUSTERED INDEX ")
-				.append(keyName).append("index").append("ON").append(tableName)
-				.append("(").append(keyName).append(keyName).append(");");
+				.append(keyName).append("index").append(" ON ").append(tableName)
+				.append("(").append(keyName).append(");");
 
 		DatabaseOp.createIndex(indexSQL.toString(), this.databaseName); //创建非id列(expert.name,keywords.keyword)的非聚集索引
 
@@ -327,7 +327,9 @@ public class SpMtrix
 				Integer id = me.getValue();
 
 				pstmt.setString(1, name);
+//				System.out.println(name);
 				pstmt.setInt(2, id);
+//				System.out.println(id);
 				pstmt.execute();
 			}
 			this.con.commit();

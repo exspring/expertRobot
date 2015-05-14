@@ -64,6 +64,8 @@ public class TfIdf
 
 	private int idCount = 0;
 
+	private double importantThresholdValue; // 是否为重要词的阈值
+
 	public Set<String> getDirtWordList()
 	{
 		return dirtWordList;
@@ -360,7 +362,7 @@ public class TfIdf
 
 	private boolean isImportant(double tfidf)
 	{
-		return tfidf > 5.0000;
+		return tfidf > this.importantThresholdValue;
 		// return true;
 	}
 
@@ -530,6 +532,63 @@ public class TfIdf
 		}
 	}
 
+	public void writeMapToDatabase(Map<String, Double> map, String tableName)
+	{
+		DbConntion dc = new DbConntion();
+		Connection con = dc.getManualCommitConnection();
+		PreparedStatement pstmt = null;
+
+		StringBuffer insertSQL = new StringBuffer("INSERT INTO ").append(
+				tableName).append(" VALUES (?,?);");
+		try
+		{
+			pstmt = con.prepareStatement(insertSQL.toString());
+
+			Iterator<Map.Entry<String, Double>> ite = map.entrySet().iterator();
+			while (ite.hasNext())
+			{
+				Map.Entry<String, Double> me = ite.next();
+
+				String word = me.getKey();
+				Double value = me.getValue();
+
+				if (this.isImportant(value))
+				{
+//					System.out.println(word);
+					pstmt.setString(1, word);
+//					System.out.println(value);
+					pstmt.setFloat(2, value.floatValue());
+
+					pstmt.executeUpdate();
+				}
+			}
+
+			con.commit();
+
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	public void writeIdfToDatabase()
+	{
+		String tableName = "idf";
+		String createSQL = "id bigint NOT NULL IDENTITY PRIMARY KEY,word varchar(200) NOT NULL , value float";
+		String databaseName = DatabaseOp.createTable(tableName, createSQL,
+				"expert");
+		if (null == databaseName)
+		{
+			return;
+		}
+		
+		String indexSQL = "CREATE NONCLUSTERED INDEX wordindex ON " + tableName + "(word);";
+		DatabaseOp.createIndex(indexSQL, "expert");
+		this.writeMapToDatabase(this.idf, tableName);
+
+	}
+
 	/**
 	 * 将tfidf值写入到数据库中
 	 * 
@@ -540,7 +599,7 @@ public class TfIdf
 
 		this.tableName = "tfidf";
 
-//		String databaseName = this.createDatabase();
+		// String databaseName = this.createDatabase();
 
 		if (databaseName == null) // 数据库创建失败
 		{
@@ -593,6 +652,7 @@ public class TfIdf
 		this.wordPath = new File("word.txt");
 		this.keyWordPath = new File("keyWords");
 		this.dirtWordList = new HashSet<String>();
+		this.importantThresholdValue = 5.00;
 		this.read();
 		// this.outputwordlist();
 		// this.buildTFMap();
@@ -604,7 +664,8 @@ public class TfIdf
 	{
 		TfIdf ti = new TfIdf();
 		// ti.write();
-		ti.writeToDatabase();
+		// ti.writeToDatabase();
+		ti.writeIdfToDatabase();
 		ti.createDirtWordsDict();
 	}
 }

@@ -91,6 +91,8 @@ public class DatabaseOp
 	{
 		Connection con = DatabaseOp.getConnection(database);
 		
+		System.out.println(sql);
+		
 		Statement stmt = null;
 		
 		try
