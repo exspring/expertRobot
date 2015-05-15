@@ -25,7 +25,7 @@ import database.DatabaseOp;
 import database.DbConntion;
 
 /**
- * @author lxx
+ * @author lxyzk
  *
  */
 public class TfIdf

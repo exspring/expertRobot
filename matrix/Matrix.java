@@ -14,14 +14,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import Json.FileLister;
 
 public class Matrix
 {
 	private Set<String> keyWords;
 	private File keyDictDir;
 	private File MatrixPath;
-	private FileLister fileLister;
 	boolean isFirstOfFile = true;
 
 	private void loadKeyWords()

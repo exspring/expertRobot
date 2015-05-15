@@ -9,8 +9,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -19,7 +19,10 @@ import com.sun.jna.ptr.IntByReference;
 public class ParagraphProcess
 {
 
+	private String[] reault;
+
 	private DirtWordsDict dirtWordsFilter = new DirtWordsDict();
+
 	// 定义接口CLibrary，继承自com.sun.jna.Library
 	public interface CLibrary extends Library
 	{
@@ -32,8 +35,9 @@ public class ParagraphProcess
 				String sLicenceCode);
 
 		public String NLPIR_ParagraphProcess(String sSrc, int bPOSTagged);
-		
-		public Result[] NLPIR_ParagraphProcessA(String sParagraph, IntByReference pResultCount, boolean bUserDict);
+
+		public Result[] NLPIR_ParagraphProcessA(String sParagraph,
+				IntByReference pResultCount, boolean bUserDict);
 
 		public String NLPIR_GetKeyWords(String sLine, int nMaxKeyLimit,
 				boolean bWeightOut);
@@ -58,7 +62,8 @@ public class ParagraphProcess
 		try
 		{
 			return new String(aidString.getBytes(ori_encoding), new_encoding);
-		} catch (UnsupportedEncodingException e)
+		}
+		catch (UnsupportedEncodingException e)
 		{
 			e.printStackTrace();
 		}
@@ -73,10 +78,10 @@ public class ParagraphProcess
 			writer = new BufferedWriter(new OutputStreamWriter(
 					new FileOutputStream(file, true), "UTF-8"));
 			System.out.println("Write to :" + file.getAbsolutePath());
-//			String filterArray[] = { ",", ".", "\"", "/", ":", ";", "、", "～",
-//					"℃", "-", "(", ")", "_", "|", "【", "】", "!", "=", "&", "《",
-//					"》", "。", "--", "_", "]", "]", "~" ," "};
-//			List<String> filter = Arrays.asList(filterArray);
+			// String filterArray[] = { ",", ".", "\"", "/", ":", ";", "、", "～",
+			// "℃", "-", "(", ")", "_", "|", "【", "】", "!", "=", "&", "《",
+			// "》", "。", "--", "_", "]", "]", "~" ," "};
+			// List<String> filter = Arrays.asList(filterArray);
 			for (String s : content)
 			{
 				if (dirtWordsFilter.isContain(s) == false)
@@ -86,25 +91,91 @@ public class ParagraphProcess
 				}
 			}
 			writer.close();
-		} catch (IOException e)
+		}
+		catch (IOException e)
 		{
 			e.printStackTrace();
 		}
 	}
-
-	public void FileParagraphProcess(File file)
+	
+	/**
+	 * 以set的形式获得分词后的结果
+	 * 调用此方法之前确保调用过splite(String sentence)方法
+	 * @return 
+	 * 分词后的结果set
+	 */
+	public Set<String> getSpliteResult()
 	{
-		StringBuffer userDictPath = new StringBuffer("KeyWords\\");
-		StringBuffer userDictName = userDictPath.append(file.getName());
+		Set<String> rs = new HashSet<String>();
+		
+		for(String s : this.reault)
+		{
+			rs.add(s);
+		}
+		
+		return rs;
+	}
+
+	/**
+	 * 分词
+	 * @param sentence
+	 * 待分词语句
+	 */
+	public void split(String sentence)
+	{
+		this.init();
+		this.splitSentence(sentence);
+		this.free();
+	}
+
+	private void splitSentence(String sentence)
+	{
+		String r = null;
+		r = CLibrary.Instance.NLPIR_ParagraphProcess(sentence, 0);
+		this.reault = r.split(" ");
+	}
+
+	private boolean init()//加载资源
+	{
 		int initFlag = CLibrary.Instance.NLPIR_Init("", 1, "0");
 		if (0 == initFlag)
 		{
 			System.out.println("Init failed!");
+			return false;
+		}
+		return true;
+	}
+	
+	private void free() //释放资源
+	{
+		CLibrary.Instance.NLPIR_Exit();
+	}
+	
+	/**
+	 * 导入用户词典
+	 * @param dictPath 用户词典路径
+	 * @return 导入的词数
+	 */
+	public int importUserDict(String dictPath)
+	{
+		int UserDictInitCount = CLibrary.Instance.NLPIR_ImportUserDict(
+				dictPath, true);
+
+		return UserDictInitCount;
+	}
+
+	public void FileParagraphProcess(File file)
+	{
+		StringBuffer userDictPath = new StringBuffer("KeyWords\\").append(file.getName()); //用户词典位置
+
+		if (!this.init())
+		{
 			return;
 		}
-		int UserDictInitCount = CLibrary.Instance.NLPIR_ImportUserDict(
-				userDictName.toString(), true);
-		System.out.println("Count" + UserDictInitCount);
+
+		int userDictInitCount = this.importUserDict(userDictPath.toString()); //导入相应用户词典
+
+		System.out.println("Count" + userDictInitCount);
 
 		String line = null;
 		BufferedReader reader = null;
@@ -112,29 +183,27 @@ public class ParagraphProcess
 		{
 			reader = new BufferedReader(new InputStreamReader(
 					new FileInputStream(file), "UTF-8"));
-			int wordsCount;
-			String result = null;
 			while ((line = reader.readLine()) != null)
 			{
-				result = CLibrary.Instance.NLPIR_ParagraphProcess(line, 0);
-//				System.out.println(wordsCount.toString());
-				String r[] = result.split(" ");
+				this.splitSentence(line);
 				File words = new File("words\\" + file.getName());
-				this.FileWriter(words, r);
+				this.FileWriter(words, this.reault);
 			}
-		} catch (IOException e)
+		}
+		catch (IOException e)
 		{
 			e.printStackTrace();
 		}
-		CLibrary.Instance.NLPIR_Exit();
+
+		this.free();
 	}
 
 	public static void main(String[] args) throws Exception
 	{
-		String system_charset = "UTF-8";
-		int charset_type = 1;
+//		String system_charset = "UTF-8";
+//		int charset_type = 1;
 		ParagraphProcess ph = new ParagraphProcess();
-		int init_flag = CLibrary.Instance.NLPIR_Init("", charset_type, "0");
+//		int init_flag = CLibrary.Instance.NLPIR_Init("", charset_type, "0");
 		File direction = new File("target1");
 		File[] files = direction.listFiles();
 		for (File file : files)
